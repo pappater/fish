@@ -1,8 +1,37 @@
-# fish
+# 🐟 Fish - AI-Generated Image Gallery
 
-A simple image gallery page that displays colorful fish-themed images.
+A dynamic, responsive image gallery web application designed to showcase and record AI-generated images. This project provides a clean, Pinterest-style masonry layout that automatically organizes and displays images in an aesthetically pleasing grid format.
 
-## Adding New Images
+## 📖 About This Application
+
+**Fish** is an automated image gallery platform specifically created to curate and display AI-generated artwork. The application serves as a visual record of images created by various AI models, providing an elegant viewing experience without requiring manual configuration.
+
+### Key Features
+
+- **🤖 AI-Generated Content**: All images displayed in this gallery are created by artificial intelligence models
+- **📱 Responsive Design**: Seamlessly adapts from desktop (4 columns) to mobile (1 column) viewing
+- **⚡ Automatic Image Detection**: Images are automatically discovered and added to the gallery during deployment
+- **🎨 Masonry Layout**: Pinterest-style column layout that beautifully arranges images of varying sizes
+- **🚀 Lazy Loading**: Images load on-demand as you scroll for optimal performance
+- **✨ Smooth Animations**: Hover effects and loading transitions enhance user experience
+- **🔄 Zero Configuration**: Simply add images to the folder - no manual list updates needed
+
+### Technology Stack
+
+- **Frontend**: Pure HTML, CSS, and JavaScript (no frameworks required)
+- **Styling**: Modern CSS with flexbox/grid and responsive design
+- **Deployment**: GitHub Actions + GitHub Pages
+- **Automation**: Shell script for automatic image list generation
+
+### How It Works
+
+1. Images are stored in the `images/` directory
+2. During deployment, a shell script scans the directory for image files
+3. The script automatically injects the image list into the HTML file
+4. The gallery dynamically loads and displays all images in a masonry grid
+5. Changes are automatically deployed to GitHub Pages
+
+## 🖼️ Adding New Images
 
 To add new images to the gallery:
 
@@ -12,7 +41,7 @@ To add new images to the gallery:
 
 **That's it!** The image list is automatically generated during deployment - no manual editing required.
 
-## Local Development
+## 💻 Local Development
 
 To test locally:
 ```bash
@@ -20,6 +49,53 @@ python3 -m http.server 8000
 # Then open http://localhost:8000 in your browser
 ```
 
-## Deployment
+The gallery will work with the current image list in `index.html`. To update the image list locally, you can run:
+```bash
+chmod +x .github/scripts/inject-images.sh
+.github/scripts/inject-images.sh
+```
 
-This site automatically deploys to GitHub Pages when changes are pushed to the `main` branch.
+## 🚀 Deployment
+
+This site automatically deploys to GitHub Pages when changes are pushed to the `main` branch. The deployment workflow:
+
+1. Checks out the repository
+2. Runs the image injection script to update the image list
+3. Uploads the site to GitHub Pages
+4. Deploys to your GitHub Pages URL
+
+## 📁 Project Structure
+
+```
+fish/
+├── index.html              # Main gallery page with embedded styles and scripts
+├── images/                 # Directory containing all gallery images
+│   ├── *.jpg, *.png, etc. # AI-generated image files
+│   └── README.md          # Images directory documentation
+├── .github/
+│   ├── workflows/
+│   │   └── deploy.yml     # GitHub Actions deployment workflow
+│   └── scripts/
+│       └── inject-images.sh # Script to auto-generate image list
+└── README.md              # This file
+
+```
+
+## 🎯 Use Cases
+
+- **Portfolio**: Showcase AI-generated artwork and creative experiments
+- **Archive**: Maintain a visual record of AI model outputs
+- **Gallery**: Display collections of AI art for public viewing
+- **Demo**: Demonstrate AI image generation capabilities
+
+## 🤝 Contributing
+
+Feel free to contribute by:
+- Adding new AI-generated images to the gallery
+- Improving the gallery layout or styling
+- Enhancing the deployment automation
+- Fixing bugs or suggesting features
+
+## 📄 License
+
+This project is open source and available for use and modification.
