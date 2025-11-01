@@ -1,0 +1,4 @@
+<svg width="400" height="550" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="550" fill="#e74c3c"/>
+  <text x="200" y="275" font-family="Arial" font-size="50" fill="white" text-anchor="middle">Fish Image</text>
+</svg>

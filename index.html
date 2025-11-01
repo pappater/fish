@@ -21,11 +21,12 @@
             position: fixed;
             top: 20px;
             left: 20px;
-            font-size: 48px;
-            font-weight: 300;
-            color: #333;
+            font-size: 64px;
+            font-weight: 900;
+            color: #000;
             z-index: 1000;
-            letter-spacing: 2px;
+            line-height: 1;
+            filter: grayscale(100%) brightness(0);
         }
 
         .gallery-container {
@@ -86,7 +87,7 @@
             }
             
             .title {
-                font-size: 40px;
+                font-size: 56px;
             }
         }
 
@@ -101,7 +102,7 @@
             }
             
             .title {
-                font-size: 32px;
+                font-size: 48px;
                 top: 15px;
                 left: 15px;
             }
@@ -121,7 +122,7 @@
             }
             
             .title {
-                font-size: 28px;
+                font-size: 40px;
                 top: 10px;
                 left: 10px;
             }
@@ -137,113 +138,117 @@
     </style>
 </head>
 <body>
-    <div class="title">fish</div>
+    <div class="title">🐟</div>
     
     <div class="gallery-container">
         <div class="gallery" id="gallery"></div>
     </div>
 
     <script>
-        // Configuration - add your images here
+        // Configuration
         const imageFolder = 'images/';
         
-        // Function to get all images from the images folder
-        // Since we can't automatically scan the folder in static HTML,
-        // we need to manually list the images or use a pattern
+        // Function to automatically detect and load all images from the images folder
         async function loadImages() {
             const gallery = document.getElementById('gallery');
             
-            // Try to load images - you should add your image filenames here
-            // This is a simple approach that tries common image names
-            const possibleImages = [];
-            
-            // Try to fetch a directory listing or use a predefined list
-            // For a static site, you need to manually add your images here:
-            const imageList = [
-                // Add your image filenames here, e.g.:
-                // 'fish1.jpg',
-                // 'fish2.jpg',
-                // 'fish3.png',
-            ];
-            
-            // If no images are defined, try to load from a common pattern
-            // NOTE: For production, use the manual list approach below to avoid unnecessary HTTP requests
-            if (imageList.length === 0) {
-                // Try loading numbered images as fallback (limited to 10 to minimize requests)
-                for (let i = 1; i <= 10; i++) {
-                    possibleImages.push(`${i}.jpg`);
-                    possibleImages.push(`${i}.png`);
-                    possibleImages.push(`${i}.svg`);
+            try {
+                // Try to fetch the directory listing
+                const response = await fetch(imageFolder);
+                const html = await response.text();
+                
+                // Parse the HTML to extract image filenames
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a');
+                
+                const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.ico'];
+                const images = [];
+                
+                links.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href && href !== '../' && href !== '..') {
+                        const lowerHref = href.toLowerCase();
+                        const isImage = imageExtensions.some(ext => lowerHref.endsWith(ext));
+                        if (isImage && !href.includes('/')) {
+                            images.push(href);
+                        }
+                    }
+                });
+                
+                // If we found images, display them
+                if (images.length > 0) {
+                    images.forEach((imageName) => {
+                        addImageToGallery(imageName);
+                    });
+                } else {
+                    // Fallback: try common patterns if directory listing didn't work
+                    fallbackImageDetection();
                 }
-            } else {
-                possibleImages.push(...imageList);
+            } catch (error) {
+                // If fetching directory fails, use fallback method
+                console.log('Directory listing not available, using fallback method');
+                fallbackImageDetection();
+            }
+        }
+        
+        // Add an image to the gallery
+        function addImageToGallery(imageName) {
+            const gallery = document.getElementById('gallery');
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            
+            const img = document.createElement('img');
+            img.src = `${imageFolder}${imageName}`;
+            img.alt = imageName;
+            img.loading = 'lazy'; // Native lazy loading
+            
+            // Add loading class initially
+            img.classList.add('loading');
+            
+            // Remove loading class when image is fully loaded
+            img.onload = function() {
+                this.classList.remove('loading');
+                this.classList.add('loaded');
+            };
+            
+            // Remove item from DOM if image fails to load
+            img.onerror = function() {
+                item.remove();
+            };
+            
+            item.appendChild(img);
+            gallery.appendChild(item);
+        }
+        
+        // Fallback method: try common naming patterns
+        function fallbackImageDetection() {
+            const extensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
+            const patterns = [];
+            
+            // Try numbered files (1-100)
+            for (let i = 1; i <= 100; i++) {
+                extensions.forEach(ext => {
+                    patterns.push(`${i}.${ext}`);
+                });
             }
             
-            // Create gallery items for each possible image
-            possibleImages.forEach((imageName, index) => {
-                const item = document.createElement('div');
-                item.className = 'gallery-item';
-                
-                const img = document.createElement('img');
-                img.src = `${imageFolder}${imageName}`;
-                img.alt = imageName;
-                img.loading = 'lazy'; // Native lazy loading
-                
-                // Add loading class initially
-                img.classList.add('loading');
-                
-                // Remove loading class when image is fully loaded
-                img.onload = function() {
-                    this.classList.remove('loading');
-                    this.classList.add('loaded');
-                };
-                
-                // Remove item from DOM if image fails to load
-                img.onerror = function() {
-                    item.remove();
-                };
-                
-                item.appendChild(img);
-                gallery.appendChild(item);
-            });
+            // Try common prefixes with numbers
+            const prefixes = ['image', 'img', 'photo', 'pic', 'fish'];
+            for (let i = 1; i <= 50; i++) {
+                prefixes.forEach(prefix => {
+                    extensions.forEach(ext => {
+                        patterns.push(`${prefix}${i}.${ext}`);
+                        patterns.push(`${prefix}_${i}.${ext}`);
+                        patterns.push(`${prefix}-${i}.${ext}`);
+                    });
+                });
+            }
             
-            // RECOMMENDED: For production, define your images explicitly to avoid unnecessary HTTP requests
-            // Uncomment and modify this section, then comment out the auto-detection code above:
-            /*
-            const images = [
-                'your-image-1.jpg',
-                'your-image-2.jpg',
-                'your-image-3.png',
-                // Add all your image filenames here
-            ];
-            
-            images.forEach((imageName, index) => {
-                const item = document.createElement('div');
-                item.className = 'gallery-item';
-                
-                const img = document.createElement('img');
-                img.src = `${imageFolder}${imageName}`;
-                img.alt = `Fish image ${index + 1}`;
-                img.loading = 'lazy'; // Native lazy loading
-                
-                // Add loading class initially
-                img.classList.add('loading');
-                
-                // Remove loading class when image is fully loaded
-                img.onload = function() {
-                    this.classList.remove('loading');
-                    this.classList.add('loaded');
-                };
-                
-                // Remove item from DOM if image fails to load
-                img.onerror = function() {
-                    item.remove();
-                };
-                
-                item.appendChild(img);
-                gallery.appendChild(item);
+            // Try each pattern
+            patterns.forEach(imageName => {
+                addImageToGallery(imageName);
             });
-            */
         }
         
         // Load images when DOM is ready
