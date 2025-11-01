@@ -6,9 +6,11 @@ A simple image gallery page that displays colorful fish-themed images.
 
 To add new images to the gallery:
 
-1. Add your image file to the `images/` folder
-2. Edit `index.html` and add the filename to the `availableImages` array (around line 151)
-3. Commit and push your changes - the page will automatically deploy via GitHub Actions
+1. Upload your image file to the `images/` folder (supports: jpg, jpeg, png, gif, svg, webp)
+2. Commit and push your changes
+3. GitHub Actions will automatically detect the new images and deploy the updated gallery
+
+**That's it!** The image list is automatically generated during deployment - no manual editing required.
 
 ## Local Development
 

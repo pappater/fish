@@ -25,6 +25,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Generate image list
+        run: |
+          chmod +x .github/scripts/inject-images.sh
+          .github/scripts/inject-images.sh
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
       

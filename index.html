@@ -149,21 +149,17 @@
         const imageFolder = 'images/';
         
         // Static list of available images
-        // To add new images:
-        // 1. Add the image file to the 'images/' folder
-        // 2. Add the filename to this array
-        // 3. Ensure the image file exists before deploying
+        // This list is automatically generated during deployment by scanning the images/ folder
+        // To add new images: Just upload image files to the 'images/' folder and commit
+        // BUILD_INJECT_START
         const availableImages = [
-            '1.svg',
-            '2.svg',
-            '3.svg',
-            '4.svg',
-            '5.svg',
-            '6.svg',
-            'awesome_pic.svg',
-            'fish-image.svg',
-            'my-photo.svg'
+            '1762023659773.jpg',
+            '1762023894824.jpg',
+            '1762026297458.jpg',
+            'file_00000000982471fbaeb201594f9c953b.png',
+            'unnamed.jpg'
         ];
+        // BUILD_INJECT_END
         
         // Load images from the static list
         function loadImages() {
