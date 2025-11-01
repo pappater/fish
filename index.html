@@ -134,8 +134,6 @@
                 padding: 10px;
             }
         }
-
-
     </style>
 </head>
 <body>
@@ -169,8 +167,9 @@
             ];
             
             // If no images are defined, try to load from a common pattern
+            // NOTE: For production, use the manual list approach below to avoid unnecessary HTTP requests
             if (imageList.length === 0) {
-                // Try loading numbered images as fallback (reduced to 10 to minimize requests)
+                // Try loading numbered images as fallback (limited to 10 to minimize requests)
                 for (let i = 1; i <= 10; i++) {
                     possibleImages.push(`${i}.jpg`);
                     possibleImages.push(`${i}.png`);
@@ -208,7 +207,8 @@
                 gallery.appendChild(item);
             });
             
-            // If you have a specific list of images, uncomment and use this instead:
+            // RECOMMENDED: For production, define your images explicitly to avoid unnecessary HTTP requests
+            // Uncomment and modify this section, then comment out the auto-detection code above:
             /*
             const images = [
                 'your-image-1.jpg',
@@ -233,6 +233,11 @@
                 img.onload = function() {
                     this.classList.remove('loading');
                     this.classList.add('loaded');
+                };
+                
+                // Remove item from DOM if image fails to load
+                img.onerror = function() {
+                    item.remove();
                 };
                 
                 item.appendChild(img);
