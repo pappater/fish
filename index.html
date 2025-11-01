@@ -135,13 +135,7 @@
             }
         }
 
-        /* Loading placeholder */
-        .placeholder {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-            min-height: 200px;
-        }
+
     </style>
 </head>
 <body>
@@ -176,52 +170,43 @@
             
             // If no images are defined, try to load from a common pattern
             if (imageList.length === 0) {
-                // Try loading numbered images as fallback
-                for (let i = 1; i <= 20; i++) {
+                // Try loading numbered images as fallback (reduced to 10 to minimize requests)
+                for (let i = 1; i <= 10; i++) {
                     possibleImages.push(`${i}.jpg`);
                     possibleImages.push(`${i}.png`);
                     possibleImages.push(`${i}.svg`);
-                    possibleImages.push(`image${i}.jpg`);
-                    possibleImages.push(`image${i}.png`);
-                    possibleImages.push(`image${i}.svg`);
                 }
             } else {
                 possibleImages.push(...imageList);
             }
             
             // Create gallery items for each possible image
-            for (const imageName of possibleImages) {
-                const img = new Image();
+            possibleImages.forEach((imageName, index) => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item';
+                
+                const img = document.createElement('img');
                 img.src = `${imageFolder}${imageName}`;
+                img.alt = imageName;
+                img.loading = 'lazy'; // Native lazy loading
                 
-                // Only add to gallery if image loads successfully
+                // Add loading class initially
+                img.classList.add('loading');
+                
+                // Remove loading class when image is fully loaded
                 img.onload = function() {
-                    const item = document.createElement('div');
-                    item.className = 'gallery-item';
-                    
-                    const imgElement = document.createElement('img');
-                    imgElement.src = this.src;
-                    imgElement.alt = imageName;
-                    imgElement.loading = 'lazy'; // Native lazy loading
-                    
-                    // Add loading class initially
-                    imgElement.classList.add('loading');
-                    
-                    // Remove loading class when image is fully loaded
-                    imgElement.onload = function() {
-                        this.classList.remove('loading');
-                        this.classList.add('loaded');
-                    };
-                    
-                    item.appendChild(imgElement);
-                    gallery.appendChild(item);
+                    this.classList.remove('loading');
+                    this.classList.add('loaded');
                 };
                 
-                // Silently ignore errors for non-existent images
+                // Remove item from DOM if image fails to load
                 img.onerror = function() {
-                    // Do nothing - image doesn't exist
+                    item.remove();
                 };
-            }
+                
+                item.appendChild(img);
+                gallery.appendChild(item);
+            });
             
             // If you have a specific list of images, uncomment and use this instead:
             /*
