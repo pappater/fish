@@ -6,12 +6,13 @@ set -e
 
 IMAGES_DIR="images"
 INDEX_FILE="index.html"
+TEMP_FILE="${INDEX_FILE}.tmp"
 
 echo "Scanning ${IMAGES_DIR} directory for images..."
 
-# Get list of image files (jpg, jpeg, png, gif, svg, webp)
-# Sort them alphabetically for consistency
-image_files=$(find "${IMAGES_DIR}" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.svg" -o -iname "*.webp" \) -printf "%f\n" | sort)
+# Get list of image files (jpg, jpeg, png, gif, svg, webp) - portable version
+# Works with both GNU find and BSD find
+image_files=$(find "${IMAGES_DIR}" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.svg" -o -iname "*.webp" \) -exec basename {} \; | sort)
 
 # Check if any images found
 if [ -z "$image_files" ]; then
@@ -21,24 +22,38 @@ else
     echo "Found images:"
     echo "$image_files"
     
-    # Build JavaScript array entries
+    # Build JavaScript array entries with proper newlines
     image_list=""
     while IFS= read -r file; do
         if [ -z "$image_list" ]; then
             image_list="            '${file}'"
         else
-            image_list="${image_list},\n            '${file}'"
+            image_list="${image_list},"$'\n'"            '${file}'"
         fi
     done <<< "$image_files"
 fi
 
-# Create the new content to inject
-new_content="        const availableImages = [\n${image_list}\n        ];"
-
 echo "Injecting image list into ${INDEX_FILE}..."
 
-# Use sed to replace content between markers (BUILD_INJECT_START and BUILD_INJECT_END)
-sed -i '/BUILD_INJECT_START/,/BUILD_INJECT_END/{//!d}' "${INDEX_FILE}"
-sed -i "/BUILD_INJECT_START/a\\${new_content}" "${INDEX_FILE}"
+# Use awk for portable, cross-platform text replacement
+awk -v img_list="$image_list" '
+    /BUILD_INJECT_START/ {
+        print
+        print "        const availableImages = ["
+        if (img_list != "") {
+            print img_list
+        }
+        print "        ];"
+        skip = 1
+        next
+    }
+    /BUILD_INJECT_END/ {
+        skip = 0
+    }
+    !skip
+' "${INDEX_FILE}" > "${TEMP_FILE}"
+
+# Replace original file with updated version
+mv "${TEMP_FILE}" "${INDEX_FILE}"
 
 echo "✓ Successfully injected image list into ${INDEX_FILE}"
