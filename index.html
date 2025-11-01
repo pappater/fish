@@ -148,48 +148,27 @@
         // Configuration
         const imageFolder = 'images/';
         
-        // Function to automatically detect and load all images from the images folder
-        async function loadImages() {
+        // Static list of available images - update this list when adding new images
+        const availableImages = [
+            '1.svg',
+            '2.svg',
+            '3.svg',
+            '4.svg',
+            '5.svg',
+            '6.svg',
+            'awesome_pic.svg',
+            'fish-image.svg',
+            'my-photo.svg'
+        ];
+        
+        // Load images from the static list
+        function loadImages() {
             const gallery = document.getElementById('gallery');
             
-            try {
-                // Try to fetch the directory listing
-                const response = await fetch(imageFolder);
-                const html = await response.text();
-                
-                // Parse the HTML to extract image filenames
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const links = doc.querySelectorAll('a');
-                
-                const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.ico'];
-                const images = [];
-                
-                links.forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (href && href !== '../' && href !== '..') {
-                        const lowerHref = href.toLowerCase();
-                        const isImage = imageExtensions.some(ext => lowerHref.endsWith(ext));
-                        if (isImage && !href.includes('/')) {
-                            images.push(href);
-                        }
-                    }
-                });
-                
-                // If we found images, display them
-                if (images.length > 0) {
-                    images.forEach((imageName) => {
-                        addImageToGallery(imageName);
-                    });
-                } else {
-                    // Fallback: try common patterns if directory listing didn't work
-                    fallbackImageDetection();
-                }
-            } catch (error) {
-                // If fetching directory fails, use fallback method
-                console.log('Directory listing not available, using fallback method');
-                fallbackImageDetection();
-            }
+            // Display all images from the static list
+            availableImages.forEach((imageName) => {
+                addImageToGallery(imageName);
+            });
         }
         
         // Add an image to the gallery
@@ -214,41 +193,12 @@
             
             // Remove item from DOM if image fails to load
             img.onerror = function() {
+                console.error(`Failed to load image: ${imageName}`);
                 item.remove();
             };
             
             item.appendChild(img);
             gallery.appendChild(item);
-        }
-        
-        // Fallback method: try common naming patterns
-        function fallbackImageDetection() {
-            const extensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
-            const patterns = [];
-            
-            // Try numbered files (1-100)
-            for (let i = 1; i <= 100; i++) {
-                extensions.forEach(ext => {
-                    patterns.push(`${i}.${ext}`);
-                });
-            }
-            
-            // Try common prefixes with numbers
-            const prefixes = ['image', 'img', 'photo', 'pic', 'fish'];
-            for (let i = 1; i <= 50; i++) {
-                prefixes.forEach(prefix => {
-                    extensions.forEach(ext => {
-                        patterns.push(`${prefix}${i}.${ext}`);
-                        patterns.push(`${prefix}_${i}.${ext}`);
-                        patterns.push(`${prefix}-${i}.${ext}`);
-                    });
-                });
-            }
-            
-            // Try each pattern
-            patterns.forEach(imageName => {
-                addImageToGallery(imageName);
-            });
         }
         
         // Load images when DOM is ready
