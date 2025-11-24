@@ -12,12 +12,18 @@ import os
 import sys
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import base64
 
 import google.generativeai as genai
 from github import Github, InputFileContent
+
+
+# Custom exception for image generation failures
+class ImageGenerationError(Exception):
+    """Raised when image generation fails but should not stop the entire process."""
+    pass
 
 # Configuration
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -128,14 +134,15 @@ def save_prompt_to_gist(art_style, art_concept):
             print(f"ERROR: Could not access gist {FISH_GIST_ID}: {e}")
             sys.exit(1)
         
-        # Create filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Create filename with timestamp (UTC)
+        now_utc = datetime.now(timezone.utc)
+        timestamp = now_utc.strftime("%Y%m%d_%H%M%S")
         filename = f"art_prompt_{timestamp}.md"
         
         # Create markdown content
         content = f"""# Art Concept: {art_style}
 
-**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
+**Generated:** {now_utc.strftime("%Y-%m-%d %H:%M:%S UTC")}
 
 **Art Style:** {art_style}
 
@@ -190,8 +197,8 @@ def generate_image(art_concept, art_style):
         # Generate image with the art concept prompt
         response = imagen_model.generate_content(art_concept)
         
-        # Save image
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        # Save image (using UTC timestamp)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         image_filename = f"{timestamp}.png"
         image_path = IMAGES_DIR / image_filename
         
@@ -203,12 +210,15 @@ def generate_image(art_concept, art_style):
         if response and hasattr(response, 'parts'):
             for part in response.parts:
                 if hasattr(part, 'inline_data'):
-                    # Save the image data
+                    # Validate image data before writing
                     image_data = part.inline_data.data
-                    with open(image_path, "wb") as f:
-                        f.write(image_data)
-                    print(f"✓ Image saved to {image_path}")
-                    return str(image_path)
+                    if image_data and len(image_data) > 0:
+                        with open(image_path, "wb") as f:
+                            f.write(image_data)
+                        print(f"✓ Image saved to {image_path}")
+                        return str(image_path)
+                    else:
+                        print("WARNING: Image data is empty or None")
         
         # If we reach here, try alternative format
         if hasattr(response, '_result'):
@@ -218,11 +228,15 @@ def generate_image(art_concept, art_style):
                 if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                     for part in candidate.content.parts:
                         if hasattr(part, 'inline_data'):
+                            # Validate image data before writing
                             image_data = part.inline_data.data
-                            with open(image_path, "wb") as f:
-                                f.write(image_data)
-                            print(f"✓ Image saved to {image_path}")
-                            return str(image_path)
+                            if image_data and len(image_data) > 0:
+                                with open(image_path, "wb") as f:
+                                    f.write(image_data)
+                                print(f"✓ Image saved to {image_path}")
+                                return str(image_path)
+                            else:
+                                print("WARNING: Image data is empty or None")
         
         print("ERROR: Could not extract image data from response")
         sys.exit(1)
@@ -240,7 +254,7 @@ def generate_image(art_concept, art_style):
         print(f"  - Stable Diffusion")
         print(f"  - Midjourney")
         print(f"  - Vertex AI Imagen (Google Cloud)")
-        raise  # Re-raise to be caught by main()
+        raise ImageGenerationError(f"Image generation failed: {e}")
 
 
 def create_metadata_file(art_style, art_concept, gist_url, image_path):
@@ -258,7 +272,7 @@ def create_metadata_file(art_style, art_concept, gist_url, image_path):
         "art_concept": art_concept,
         "gist_url": gist_url,
         "image_file": Path(image_path).name,
-        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "gemini_model": GEMINI_MODEL
     }
     
@@ -308,8 +322,8 @@ def main():
             
             # Create metadata file
             create_metadata_file(art_style, art_concept, gist_url, image_path)
-        except SystemExit:
-            print("\n⚠️  Image generation failed. Continuing with prompt generation only.")
+        except ImageGenerationError as e:
+            print(f"\n⚠️  Image generation failed: {e}")
             print("  The art concept has been saved to the gist and can be used")
             print("  with other image generation tools.")
             image_path = None
