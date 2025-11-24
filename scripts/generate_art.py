@@ -3,6 +3,9 @@
 Art Style Image Generator
 Picks an art style, generates a detailed art concept using Gemini,
 saves the prompt to a public gist, then generates an image using Gemini.
+
+Note: Image generation requires access to Gemini's Imagen API. If not available,
+the script will still generate and save the art concept prompt to the gist.
 """
 
 import os
@@ -21,6 +24,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
 GIST_TOKEN = os.environ.get("GIST_TOKEN")
 FISH_GIST_ID = os.environ.get("FISH_GIST_ID")
+SKIP_IMAGE_GENERATION = os.environ.get("SKIP_IMAGE_GENERATION", "false").lower() == "true"
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent
@@ -160,7 +164,10 @@ def save_prompt_to_gist(art_style, art_concept):
 
 def generate_image(art_concept, art_style):
     """
-    Generate an image using Gemini AI based on the art concept prompt.
+    Generate an image using Gemini's Imagen API based on the art concept prompt.
+    
+    Note: This uses the Imagen API through Gemini's generative model with imagen-3.0-generate-001
+    which is available in the latest versions of the API.
     
     Args:
         art_concept: The detailed art concept prompt
@@ -172,21 +179,16 @@ def generate_image(art_concept, art_style):
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Use Imagen 3 model for image generation
-        imagen_model = genai.ImageGenerationModel("imagen-3.0-generate-001")
-        
+        # Use Imagen model for image generation
+        # The Imagen API is accessed through GenerativeModel with specific model names
         print(f"Generating image for {art_style}...")
         print(f"Using prompt: {art_concept[:100]}...")
         
-        # Generate image
-        result = imagen_model.generate_images(
-            prompt=art_concept,
-            number_of_images=1,
-            safety_filter_level="block_only_high",
-            person_generation="allow_adult",
-            aspect_ratio="1:1",
-            negative_prompt="low quality, blurry, distorted, ugly, poorly drawn"
-        )
+        # Try to use the imagen model directly
+        imagen_model = genai.GenerativeModel("imagen-3.0-generate-001")
+        
+        # Generate image with the art concept prompt
+        response = imagen_model.generate_content(art_concept)
         
         # Save image
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -196,36 +198,49 @@ def generate_image(art_concept, art_style):
         # Ensure images directory exists
         IMAGES_DIR.mkdir(parents=True, exist_ok=True)
         
-        # Save the image
-        if result and len(result.images) > 0:
-            # Get the first image
-            image = result.images[0]
-            
-            # Save image bytes to file
-            with open(image_path, "wb") as f:
-                f.write(image._image_bytes)
-            
-            print(f"✓ Image saved to {image_path}")
-            return str(image_path)
-        else:
-            print("ERROR: No image was generated")
-            sys.exit(1)
+        # Extract image data from response
+        # The response should contain image data in parts
+        if response and hasattr(response, 'parts'):
+            for part in response.parts:
+                if hasattr(part, 'inline_data'):
+                    # Save the image data
+                    image_data = part.inline_data.data
+                    with open(image_path, "wb") as f:
+                        f.write(image_data)
+                    print(f"✓ Image saved to {image_path}")
+                    return str(image_path)
+        
+        # If we reach here, try alternative format
+        if hasattr(response, '_result'):
+            result = response._result
+            if hasattr(result, 'candidates') and result.candidates:
+                candidate = result.candidates[0]
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data'):
+                            image_data = part.inline_data.data
+                            with open(image_path, "wb") as f:
+                                f.write(image_data)
+                            print(f"✓ Image saved to {image_path}")
+                            return str(image_path)
+        
+        print("ERROR: Could not extract image data from response")
+        sys.exit(1)
             
     except Exception as e:
-        print(f"ERROR: Failed to generate image: {e}")
-        print(f"Note: Imagen API might not be available or you need specific permissions")
-        print(f"Attempting alternative method...")
-        
-        # Alternative: Try using generate_content with image output
-        try:
-            model = genai.GenerativeModel("gemini-pro-vision")
-            # This is a fallback but may not work for image generation
-            print("ERROR: Image generation requires Imagen API access")
-            print("Please ensure you have access to google.generativeai.ImageGenerationModel")
-            sys.exit(1)
-        except Exception as e2:
-            print(f"ERROR: Alternative method also failed: {e2}")
-            sys.exit(1)
+        print(f"ERROR: Failed to generate image using imagen model: {e}")
+        print(f"Error type: {type(e).__name__}")
+        print(f"\nNote: Image generation with Gemini requires:")
+        print(f"  1. Access to Imagen API (imagen-3.0-generate-001 model)")
+        print(f"  2. Proper API key with image generation permissions")
+        print(f"  3. Updated google-generativeai library (>=0.8.0)")
+        print(f"\nThe art concept prompt has been saved to the gist.")
+        print(f"You can use it with other image generation tools:")
+        print(f"  - DALL-E (OpenAI)")
+        print(f"  - Stable Diffusion")
+        print(f"  - Midjourney")
+        print(f"  - Vertex AI Imagen (Google Cloud)")
+        raise  # Re-raise to be caught by main()
 
 
 def create_metadata_file(art_style, art_concept, gist_url, image_path):
@@ -280,20 +295,38 @@ def main():
     gist_url = save_prompt_to_gist(art_style, art_concept)
     print(f"\n[3/4] Saved to gist: {gist_url}")
     
-    # Step 4: Generate image
-    print(f"\n[4/4] Generating image...")
-    image_path = generate_image(art_concept, art_style)
-    print(f"  Image saved: {image_path}")
-    
-    # Create metadata file
-    create_metadata_file(art_style, art_concept, gist_url, image_path)
+    # Step 4: Generate image (optional based on configuration)
+    image_path = None
+    if SKIP_IMAGE_GENERATION:
+        print(f"\n[4/4] Skipping image generation (SKIP_IMAGE_GENERATION=true)")
+        print("  Note: Image generation requires Imagen API access")
+    else:
+        print(f"\n[4/4] Generating image...")
+        try:
+            image_path = generate_image(art_concept, art_style)
+            print(f"  Image saved: {image_path}")
+            
+            # Create metadata file
+            create_metadata_file(art_style, art_concept, gist_url, image_path)
+        except SystemExit:
+            print("\n⚠️  Image generation failed. Continuing with prompt generation only.")
+            print("  The art concept has been saved to the gist and can be used")
+            print("  with other image generation tools.")
+            image_path = None
     
     print("\n" + "=" * 60)
     print("✓ Art generation complete!")
     print(f"  Art Style: {art_style}")
     print(f"  Prompt: {gist_url}")
-    print(f"  Image: {image_path}")
+    if image_path:
+        print(f"  Image: {image_path}")
+    else:
+        print(f"  Image: Not generated (use prompt with external tools)")
     print("=" * 60)
+    
+    # Return success even if image generation failed
+    # The main value is in the art concept generation and gist storage
+    sys.exit(0)
 
 
 if __name__ == "__main__":

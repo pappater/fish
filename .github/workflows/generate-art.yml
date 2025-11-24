@@ -35,8 +35,10 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           FISH_GIST_ID: ${{ secrets.FISH_GIST_ID }}
+          SKIP_IMAGE_GENERATION: ${{ secrets.SKIP_IMAGE_GENERATION }}
         run: |
           python scripts/generate_art.py
+        continue-on-error: false
       
       - name: Commit and push new images
         run: |
