@@ -239,7 +239,7 @@ def generate_image(art_concept, art_style):
                                 print("WARNING: Image data is empty or None")
         
         print("ERROR: Could not extract image data from response")
-        sys.exit(1)
+        raise ImageGenerationError("No valid image data found in response")
             
     except Exception as e:
         print(f"ERROR: Failed to generate image using imagen model: {e}")

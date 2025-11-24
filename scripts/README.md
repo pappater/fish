@@ -66,7 +66,7 @@ The script creates:
 
 ### Art Styles
 
-The script selects from 230+ art styles defined in `art_styles.json`, including:
+The script selects from 215 art styles defined in `art_styles.json`, including:
 - Historical styles (Baroque, Renaissance, Impressionism, etc.)
 - Modern movements (Cubism, Surrealism, Pop Art, etc.)
 - Contemporary styles (Digital art, Glitch art, AI art, etc.)
