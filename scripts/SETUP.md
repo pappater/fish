@@ -11,7 +11,7 @@ You need access to Google's Gemini API with image generation capabilities:
 3. Generate an API key
 4. Ensure your API key has access to:
    - Gemini models for text generation (gemini-2.0-flash-exp or similar)
-   - Imagen models for image generation (imagen-3.0-generate-001)
+   - Imagen models for image generation (gemini-2.5-flash-image)
 
 **Note**: Image generation with Gemini/Imagen may require:
 - Specific API access (not all API keys have image generation enabled)

@@ -102,7 +102,7 @@ All code review issues resolved:
 ```
 1. Use art concept prompt
 2. Call Gemini Imagen API
-   - Model: imagen-3.0-generate-001
+   - Model: gemini-2.5-flash-image
    - Validate response
    - Extract image data
 3. Save image to images/
@@ -197,7 +197,7 @@ python scripts/generate_art.py
 
 ### Gemini API
 - Text generation: gemini-2.0-flash-exp (or configured model)
-- Image generation: imagen-3.0-generate-001
+- Image generation: gemini-2.5-flash-image
 - Rate limits: ~60 requests/minute
 - Authentication: API key
 
