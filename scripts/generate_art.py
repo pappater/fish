@@ -53,6 +53,11 @@ MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "3"))
 INITIAL_RETRY_DELAY = float(os.environ.get("INITIAL_RETRY_DELAY", "20.0"))
 MAX_RETRY_DELAY = float(os.environ.get("MAX_RETRY_DELAY", "60.0"))
 
+# OpenAI API configuration
+OPENAI_REQUEST_TIMEOUT = 120
+DALLE_3_MAX_PROMPT_LENGTH = 4000
+DALLE_2_MAX_PROMPT_LENGTH = 1000
+
 # Paths
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -289,8 +294,8 @@ def generate_image_openai(art_concept, image_path):
     print(f"Using OpenAI model: {OPENAI_IMAGE_MODEL}")
     print(f"Image size: {OPENAI_IMAGE_SIZE}, Quality: {OPENAI_IMAGE_QUALITY}")
     
-    # Truncate prompt if too long for DALL-E (max 4000 chars for DALL-E 3)
-    max_prompt_length = 4000 if OPENAI_IMAGE_MODEL == "dall-e-3" else 1000
+    # Truncate prompt if too long for DALL-E
+    max_prompt_length = DALLE_3_MAX_PROMPT_LENGTH if OPENAI_IMAGE_MODEL == "dall-e-3" else DALLE_2_MAX_PROMPT_LENGTH
     truncated_prompt = art_concept[:max_prompt_length]
     
     last_exception = None
@@ -321,7 +326,7 @@ def generate_image_openai(art_concept, image_path):
                 }
             )
             
-            with urllib.request.urlopen(req, timeout=120) as response:
+            with urllib.request.urlopen(req, timeout=OPENAI_REQUEST_TIMEOUT) as response:
                 result = json.loads(response.read().decode('utf-8'))
             
             # Extract and save image
@@ -338,7 +343,10 @@ def generate_image_openai(art_concept, image_path):
             
         except urllib.error.HTTPError as e:
             last_exception = e
-            error_body = e.read().decode('utf-8') if e.fp else str(e)
+            try:
+                error_body = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+            except Exception:
+                error_body = str(e)
             
             is_rate_limit = e.code == 429 or "rate" in error_body.lower()
             
