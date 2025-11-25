@@ -25,7 +25,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Generate image list
+      - name: Generate image list and inject gist URL
+        env:
+          FISH_GIST_ID: ${{ secrets.FISH_GIST_ID }}
+          GIST_OWNER: ${{ github.repository_owner }}
         run: |
           chmod +x .github/scripts/inject-images.sh
           .github/scripts/inject-images.sh

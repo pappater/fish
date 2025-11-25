@@ -77,18 +77,15 @@ def demonstrate_art_concept_generation():
         print(f"Word count: {len(concept.split())} words")
         print()
         
-        # Show what would be saved to gist
-        print("GIST CONTENT PREVIEW:")
-        print("```markdown")
-        print(f"# Art Concept: {style}")
-        print()
-        print(f"**Generated:** 2024-11-24 06:34:00 UTC")
-        print()
-        print(f"**Art Style:** {style}")
-        print()
-        print("## Art Concept Prompt")
-        print()
-        print(concept[:200] + "...")
+        # Show what would be saved to gist (JSON format)
+        print("GIST CONTENT PREVIEW (art_prompts.json):")
+        print("```json")
+        print(json.dumps([{
+            "id": "20241124063400",
+            "art_style": style,
+            "prompt": concept[:200] + "...",
+            "generated_at": "2024-11-24 06:34:00 UTC"
+        }], indent=2))
         print("```")
         print("-" * 80)
         print()
@@ -111,9 +108,8 @@ def demonstrate_art_concept_generation():
     print("When run with API credentials, the script will:")
     print("  1. Select a random art style")
     print("  2. Generate a unique, detailed art concept using Gemini AI")
-    print("  3. Save the concept to your GitHub Gist")
-    print("  4. Generate an image using the concept prompt")
-    print("  5. Save the image to the images/ directory")
+    print("  3. Save the concept to your GitHub Gist (art_prompts.json)")
+    print("  4. The UI will fetch and display prompts from the gist")
     print("=" * 80)
 
 

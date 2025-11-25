@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Script to automatically inject image filenames into index.html
+# Script to automatically inject image filenames and gist URL into index.html
 # This scans the images/ directory and replaces the content between markers
 
 IMAGES_DIR="images"
@@ -57,3 +57,32 @@ awk -v img_list="$image_list" '
 mv "${TEMP_FILE}" "${INDEX_FILE}"
 
 echo "✓ Successfully injected image list into ${INDEX_FILE}"
+
+# Inject gist URL if FISH_GIST_ID is set
+if [ -n "${FISH_GIST_ID}" ]; then
+    echo "Injecting gist URL into ${INDEX_FILE}..."
+    
+    # Get the gist owner from the gist API (optional, fallback to pappater)
+    GIST_OWNER="${GIST_OWNER:-pappater}"
+    GIST_RAW_URL="https://gist.githubusercontent.com/${GIST_OWNER}/${FISH_GIST_ID}/raw/art_prompts.json"
+    
+    # Use awk to inject gist URL
+    awk -v gist_url="$GIST_RAW_URL" '
+        /BUILD_INJECT_GIST_START/ {
+            print
+            print "        const GIST_RAW_URL = '\''" gist_url "'\'';"
+            skip = 1
+            next
+        }
+        /BUILD_INJECT_GIST_END/ {
+            skip = 0
+        }
+        !skip
+    ' "${INDEX_FILE}" > "${TEMP_FILE}"
+    
+    mv "${TEMP_FILE}" "${INDEX_FILE}"
+    
+    echo "✓ Successfully injected gist URL into ${INDEX_FILE}"
+else
+    echo "Warning: FISH_GIST_ID not set, skipping gist URL injection"
+fi

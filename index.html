@@ -147,11 +147,241 @@
             color: #666;
         }
 
+        .footer-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .prompt-link {
+            color: #0066cc;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .prompt-link:hover {
+            color: #004499;
+            text-decoration: underline;
+        }
+
         @media screen and (max-width: 768px) {
             .footer {
                 padding: 15px;
                 margin-top: 40px;
                 font-size: 12px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background-color: #f0f0f0;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .prompt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .prompt-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .prompt-art-style {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .prompt-date {
+            font-size: 12px;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        .prompt-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+
+        .copy-button {
+            background-color: #0066cc;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .copy-button:hover {
+            background-color: #004499;
+        }
+
+        .copy-button.copied {
+            background-color: #28a745;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* Modal responsive styles */
+        @media screen and (max-width: 768px) {
+            .modal-overlay {
+                padding: 10px;
+            }
+
+            .modal {
+                max-height: 90vh;
+            }
+
+            .modal-header {
+                padding: 16px;
+            }
+
+            .modal-header h2 {
+                font-size: 18px;
+            }
+
+            .modal-body {
+                padding: 16px;
+            }
+
+            .prompt-item {
+                padding: 12px;
+            }
+
+            .prompt-header {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .prompt-art-style {
+                font-size: 15px;
+            }
+
+            .prompt-text {
+                font-size: 13px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .modal {
+                border-radius: 8px;
+            }
+
+            .modal-header {
+                padding: 14px;
+            }
+
+            .modal-body {
+                padding: 14px;
+            }
+
+            .prompt-item {
+                padding: 10px;
             }
         }
     </style>
@@ -164,12 +394,33 @@
     </div>
 
     <footer class="footer">
-        All images in this gallery are AI-generated
+        <div class="footer-content">
+            <span>All images in this gallery are AI-generated</span>
+            <a class="prompt-link" id="promptLink">Prompts</a>
+        </div>
     </footer>
+
+    <!-- Prompt Modal -->
+    <div class="modal-overlay" id="promptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Art Prompts</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading-state">Loading prompts...</div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Configuration
         const imageFolder = 'images/';
+        // FISH_GIST_ID will be replaced during deployment or set here
+        // The raw URL format for gist files is: https://gist.githubusercontent.com/{user}/{gist_id}/raw/{filename}
+        // BUILD_INJECT_GIST_START
+        const GIST_RAW_URL = '';
+        // BUILD_INJECT_GIST_END
         
         // Static list of available images
         // This list is automatically generated during deployment by scanning the images/ folder
@@ -222,6 +473,152 @@
             
             item.appendChild(img);
             gallery.appendChild(item);
+        }
+        
+        // Modal functionality
+        const promptModal = document.getElementById('promptModal');
+        const promptLink = document.getElementById('promptLink');
+        const modalClose = document.getElementById('modalClose');
+        const modalBody = document.getElementById('modalBody');
+        
+        let promptsCache = null;
+        
+        // Open modal
+        promptLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            promptModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            loadPrompts();
+        });
+        
+        // Close modal
+        modalClose.addEventListener('click', closeModal);
+        promptModal.addEventListener('click', function(e) {
+            if (e.target === promptModal) {
+                closeModal();
+            }
+        });
+        
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && promptModal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+        
+        function closeModal() {
+            promptModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        // Load prompts from gist
+        async function loadPrompts() {
+            if (promptsCache) {
+                renderPrompts(promptsCache);
+                return;
+            }
+            
+            modalBody.innerHTML = '<div class="loading-state">Loading prompts...</div>';
+            
+            if (!GIST_RAW_URL) {
+                modalBody.innerHTML = '<div class="empty-state">Prompts are not configured yet.</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(GIST_RAW_URL);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch prompts');
+                }
+                const prompts = await response.json();
+                promptsCache = prompts;
+                renderPrompts(prompts);
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+                modalBody.innerHTML = '<div class="error-state">Failed to load prompts. Please try again later.</div>';
+            }
+        }
+        
+        // Render prompts in modal
+        function renderPrompts(prompts) {
+            if (!prompts || prompts.length === 0) {
+                modalBody.innerHTML = '<div class="empty-state">No prompts available yet.</div>';
+                return;
+            }
+            
+            const promptList = document.createElement('div');
+            promptList.className = 'prompt-list';
+            
+            prompts.forEach(function(prompt) {
+                const item = document.createElement('div');
+                item.className = 'prompt-item';
+                
+                item.innerHTML = `
+                    <div class="prompt-header">
+                        <span class="prompt-art-style">${escapeHtml(prompt.art_style)}</span>
+                        <span class="prompt-date">${escapeHtml(prompt.generated_at)}</span>
+                    </div>
+                    <div class="prompt-text">${escapeHtml(prompt.prompt)}</div>
+                    <button class="copy-button" data-prompt="${escapeAttr(prompt.prompt)}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy
+                    </button>
+                `;
+                
+                promptList.appendChild(item);
+            });
+            
+            modalBody.innerHTML = '';
+            modalBody.appendChild(promptList);
+            
+            // Add copy functionality
+            modalBody.querySelectorAll('.copy-button').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const promptText = this.getAttribute('data-prompt');
+                    copyToClipboard(promptText, this);
+                });
+            });
+        }
+        
+        // Copy text to clipboard
+        async function copyToClipboard(text, button) {
+            try {
+                await navigator.clipboard.writeText(text);
+                button.classList.add('copied');
+                button.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Copied!
+                `;
+                setTimeout(function() {
+                    button.classList.remove('copied');
+                    button.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy
+                    `;
+                }, 2000);
+            } catch (error) {
+                console.error('Failed to copy:', error);
+            }
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Escape for attribute
+        function escapeAttr(text) {
+            return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
         
         // Load images when DOM is ready
