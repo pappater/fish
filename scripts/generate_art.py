@@ -37,6 +37,7 @@ SKIP_IMAGE_GENERATION = os.environ.get("SKIP_IMAGE_GENERATION", "false").lower()
 # Retry configuration for API calls
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "3"))
 INITIAL_RETRY_DELAY = float(os.environ.get("INITIAL_RETRY_DELAY", "20.0"))
+MAX_RETRY_DELAY = float(os.environ.get("MAX_RETRY_DELAY", "60.0"))
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent
@@ -200,20 +201,20 @@ def generate_image(art_concept, art_style):
     # Use the image model from environment variable
     imagen_model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
     
+    # Prepare image path with consistent timestamp (outside retry loop)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    image_filename = f"{timestamp}.png"
+    image_path = IMAGES_DIR / image_filename
+    
+    # Ensure images directory exists
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    
     last_exception = None
     
     for attempt in range(MAX_RETRIES):
         try:
             # Generate image with the art concept prompt
             response = imagen_model.generate_content(art_concept)
-            
-            # Save image (using UTC timestamp)
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-            image_filename = f"{timestamp}.png"
-            image_path = IMAGES_DIR / image_filename
-            
-            # Ensure images directory exists
-            IMAGES_DIR.mkdir(parents=True, exist_ok=True)
             
             # Extract image data from response
             # The response should contain image data in parts
@@ -256,12 +257,18 @@ def generate_image(art_concept, art_style):
             error_str = str(e)
             error_type = type(e).__name__
             
-            # Check if this is a rate limit error (429) that can be retried
-            is_rate_limit = "429" in error_str or "ResourceExhausted" in error_type or "quota" in error_str.lower()
+            # Check if this is a rate limit error that can be retried
+            # Detect by HTTP status code 429, exception type, or error message content
+            is_rate_limit = (
+                "429" in error_str or 
+                "ResourceExhausted" in error_type or 
+                "quota" in error_str.lower() or
+                "rate" in error_str.lower() and "limit" in error_str.lower()
+            )
             
             if is_rate_limit and attempt < MAX_RETRIES - 1:
-                # Calculate delay with exponential backoff
-                delay = INITIAL_RETRY_DELAY * (2 ** attempt)
+                # Calculate delay with exponential backoff, capped at MAX_RETRY_DELAY
+                delay = min(INITIAL_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
                 print(f"Rate limit hit (attempt {attempt + 1}/{MAX_RETRIES}). Retrying in {delay:.1f} seconds...")
                 time.sleep(delay)
                 continue
