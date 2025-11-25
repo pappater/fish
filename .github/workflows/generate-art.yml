@@ -33,6 +33,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GEMINI_IMAGE_MODEL: ${{ secrets.GEMINI_IMAGE_MODEL }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           FISH_GIST_ID: ${{ secrets.FISH_GIST_ID }}
           SKIP_IMAGE_GENERATION: ${{ secrets.SKIP_IMAGE_GENERATION }}

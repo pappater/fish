@@ -41,7 +41,8 @@ Add these secrets to your GitHub repository:
    - `GEMINI_API_KEY`: Your Google Gemini API key
    - `GIST_TOKEN`: Your GitHub personal access token
    - `FISH_GIST_ID`: The ID of your public gist
-   - `GEMINI_MODEL`: (Optional) Gemini model name (default: gemini-2.0-flash-exp)
+   - `GEMINI_MODEL`: (Optional) Gemini model name for text generation (default: gemini-2.0-flash-exp)
+   - `GEMINI_IMAGE_MODEL`: (Optional) Gemini model name for image generation (default: gemini-2.5-flash-preview-05-20)
 
 ## Local Development
 
@@ -60,7 +61,8 @@ Create a `.env` file or export these variables:
 export GEMINI_API_KEY="your-gemini-api-key"
 export GIST_TOKEN="your-github-token"
 export FISH_GIST_ID="your-gist-id"
-export GEMINI_MODEL="gemini-2.0-flash-exp"  # optional
+export GEMINI_MODEL="gemini-2.0-flash-exp"  # optional, for text generation
+export GEMINI_IMAGE_MODEL="gemini-2.5-flash-preview-05-20"  # optional, for image generation
 ```
 
 ### Running Locally
