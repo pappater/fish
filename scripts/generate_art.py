@@ -173,7 +173,7 @@ def generate_image(art_concept, art_style):
     """
     Generate an image using Gemini's Imagen API based on the art concept prompt.
     
-    Note: This uses the Imagen API through Gemini's generative model with gemini-2.5-flash-image
+    Note: This uses the Imagen API through Gemini's generative model with imagen-3.0-generate-002
     which is available in the latest versions of the API.
     
     Args:
@@ -192,7 +192,7 @@ def generate_image(art_concept, art_style):
         print(f"Using prompt: {art_concept[:100]}...")
         
         # Try to use the imagen model directly
-        imagen_model = genai.GenerativeModel("gemini-2.5-flash-image")
+        imagen_model = genai.GenerativeModel("imagen-3.0-generate-002")
         
         # Generate image with the art concept prompt
         response = imagen_model.generate_content(art_concept)
@@ -245,7 +245,7 @@ def generate_image(art_concept, art_style):
         print(f"ERROR: Failed to generate image using imagen model: {e}")
         print(f"Error type: {type(e).__name__}")
         print(f"\nNote: Image generation with Gemini requires:")
-        print(f"  1. Access to Imagen API (gemini-2.5-flash-image model)")
+        print(f"  1. Access to Imagen API (imagen-3.0-generate-002 model)")
         print(f"  2. Proper API key with image generation permissions")
         print(f"  3. Updated google-generativeai library (>=0.8.0)")
         print(f"\nThe art concept prompt has been saved to the gist.")
