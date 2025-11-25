@@ -28,6 +28,7 @@ class ImageGenerationError(Exception):
 # Configuration
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
+GEMINI_IMAGE_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-preview-05-20")
 GIST_TOKEN = os.environ.get("GIST_TOKEN")
 FISH_GIST_ID = os.environ.get("FISH_GIST_ID")
 SKIP_IMAGE_GENERATION = os.environ.get("SKIP_IMAGE_GENERATION", "false").lower() == "true"
@@ -173,8 +174,8 @@ def generate_image(art_concept, art_style):
     """
     Generate an image using Gemini's Imagen API based on the art concept prompt.
     
-    Note: This uses the Imagen API through Gemini's generative model with gemini-2.5-flash-image
-    which is available in the latest versions of the API.
+    Note: This uses the Imagen API through Gemini's generative model.
+    The model is configured via GEMINI_IMAGE_MODEL environment variable.
     
     Args:
         art_concept: The detailed art concept prompt
@@ -190,9 +191,10 @@ def generate_image(art_concept, art_style):
         # The Imagen API is accessed through GenerativeModel with specific model names
         print(f"Generating image for {art_style}...")
         print(f"Using prompt: {art_concept[:100]}...")
+        print(f"Using image model: {GEMINI_IMAGE_MODEL}")
         
-        # Try to use the imagen model directly
-        imagen_model = genai.GenerativeModel("gemini-2.5-flash-image")
+        # Use the image model from environment variable
+        imagen_model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
         
         # Generate image with the art concept prompt
         response = imagen_model.generate_content(art_concept)
@@ -245,7 +247,7 @@ def generate_image(art_concept, art_style):
         print(f"ERROR: Failed to generate image using imagen model: {e}")
         print(f"Error type: {type(e).__name__}")
         print(f"\nNote: Image generation with Gemini requires:")
-        print(f"  1. Access to Imagen API (gemini-2.5-flash-image model)")
+        print(f"  1. Access to Imagen API (configured model: {GEMINI_IMAGE_MODEL})")
         print(f"  2. Proper API key with image generation permissions")
         print(f"  3. Updated google-generativeai library (>=0.8.0)")
         print(f"\nThe art concept prompt has been saved to the gist.")
