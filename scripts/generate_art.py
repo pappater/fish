@@ -2,9 +2,13 @@
 """
 Art Style Image Generator
 Picks an art style, generates a detailed art concept using Gemini,
-saves the prompt to a public gist, then generates an image using Gemini.
+saves the prompt to a public gist, then generates an image using a configurable provider.
 
-Note: Image generation requires access to Gemini's Imagen API. If not available,
+Supported image generation providers:
+- gemini: Google Gemini/Imagen API (default)
+- openai: OpenAI DALL-E API
+
+Note: Image generation requires proper API access. If not available,
 the script will still generate and save the art concept prompt to the gist.
 """
 
@@ -16,6 +20,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 import base64
+import urllib.request
+import urllib.error
 
 import google.generativeai as genai
 from github import Github, Auth, InputFileContent
@@ -33,6 +39,14 @@ GEMINI_IMAGE_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-prev
 GIST_TOKEN = os.environ.get("GIST_TOKEN")
 FISH_GIST_ID = os.environ.get("FISH_GIST_ID")
 SKIP_IMAGE_GENERATION = os.environ.get("SKIP_IMAGE_GENERATION", "false").lower() == "true"
+
+# Image generation provider configuration
+# Supported providers: "gemini", "openai"
+IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "gemini").lower()
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_IMAGE_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "dall-e-3")
+OPENAI_IMAGE_SIZE = os.environ.get("OPENAI_IMAGE_SIZE", "1024x1024")
+OPENAI_IMAGE_QUALITY = os.environ.get("OPENAI_IMAGE_QUALITY", "standard")
 
 # Retry configuration for API calls
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "3"))
@@ -176,52 +190,31 @@ def save_prompt_to_gist(art_style, art_concept):
         sys.exit(1)
 
 
-def generate_image(art_concept, art_style):
+def generate_image_gemini(art_concept, image_path):
     """
-    Generate an image using Gemini's Imagen API based on the art concept prompt.
-    
-    Note: This uses the Imagen API through Gemini's generative model.
-    The model is configured via GEMINI_IMAGE_MODEL environment variable.
-    Includes retry logic with exponential backoff for rate limit errors.
+    Generate an image using Gemini's Imagen API.
     
     Args:
         art_concept: The detailed art concept prompt
-        art_style: The art style name (for filename)
+        image_path: Path to save the generated image
     
     Returns:
         str: Path to the saved image file
     """
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # Use Imagen model for image generation
-    print(f"Generating image for {art_style}...")
-    print(f"Using prompt: {art_concept[:100]}...")
     print(f"Using image model: {GEMINI_IMAGE_MODEL}")
-    
-    # Use the image model from environment variable
     imagen_model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
-    
-    # Prepare image path with consistent timestamp (outside retry loop)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    image_filename = f"{timestamp}.png"
-    image_path = IMAGES_DIR / image_filename
-    
-    # Ensure images directory exists
-    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     
     last_exception = None
     
     for attempt in range(MAX_RETRIES):
         try:
-            # Generate image with the art concept prompt
             response = imagen_model.generate_content(art_concept)
             
-            # Extract image data from response
-            # The response should contain image data in parts
             if response and hasattr(response, 'parts'):
                 for part in response.parts:
                     if hasattr(part, 'inline_data'):
-                        # Validate image data before writing
                         image_data = part.inline_data.data
                         if image_data and len(image_data) > 0:
                             with open(image_path, "wb") as f:
@@ -231,7 +224,6 @@ def generate_image(art_concept, art_style):
                         else:
                             print("WARNING: Image data is empty or None")
             
-            # If we reach here, try alternative format
             if hasattr(response, '_result'):
                 result = response._result
                 if hasattr(result, 'candidates') and result.candidates:
@@ -239,7 +231,6 @@ def generate_image(art_concept, art_style):
                     if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                         for part in candidate.content.parts:
                             if hasattr(part, 'inline_data'):
-                                # Validate image data before writing
                                 image_data = part.inline_data.data
                                 if image_data and len(image_data) > 0:
                                     with open(image_path, "wb") as f:
@@ -257,8 +248,6 @@ def generate_image(art_concept, art_style):
             error_str = str(e)
             error_type = type(e).__name__
             
-            # Check if this is a rate limit error that can be retried
-            # Detect by HTTP status code 429, exception type, or error message content
             is_rate_limit = (
                 "429" in error_str or 
                 "ResourceExhausted" in error_type or 
@@ -267,29 +256,164 @@ def generate_image(art_concept, art_style):
             )
             
             if is_rate_limit and attempt < MAX_RETRIES - 1:
-                # Calculate delay with exponential backoff, capped at MAX_RETRY_DELAY
                 delay = min(INITIAL_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
                 print(f"Rate limit hit (attempt {attempt + 1}/{MAX_RETRIES}). Retrying in {delay:.1f} seconds...")
                 time.sleep(delay)
                 continue
             else:
-                # Either not a rate limit error or we've exhausted retries
                 break
     
-    # If we get here, all retries failed
-    print(f"ERROR: Failed to generate image using imagen model: {last_exception}")
+    print(f"ERROR: Failed to generate image using Gemini model: {last_exception}")
     print(f"Error type: {type(last_exception).__name__}")
     print(f"\nNote: Image generation with Gemini requires:")
     print(f"  1. Access to Imagen API (configured model: {GEMINI_IMAGE_MODEL})")
     print(f"  2. Proper API key with image generation permissions")
     print(f"  3. Updated google-generativeai library (>=0.8.0)")
-    print(f"\nThe art concept prompt has been saved to the gist.")
-    print(f"You can use it with other image generation tools:")
-    print(f"  - DALL-E (OpenAI)")
-    print(f"  - Stable Diffusion")
-    print(f"  - Midjourney")
-    print(f"  - Vertex AI Imagen (Google Cloud)")
-    raise ImageGenerationError(f"Image generation failed: {last_exception}")
+    raise ImageGenerationError(f"Gemini image generation failed: {last_exception}")
+
+
+def generate_image_openai(art_concept, image_path):
+    """
+    Generate an image using OpenAI's DALL-E API.
+    
+    Args:
+        art_concept: The detailed art concept prompt
+        image_path: Path to save the generated image
+    
+    Returns:
+        str: Path to the saved image file
+    """
+    if not OPENAI_API_KEY:
+        raise ImageGenerationError("OPENAI_API_KEY environment variable is not set")
+    
+    print(f"Using OpenAI model: {OPENAI_IMAGE_MODEL}")
+    print(f"Image size: {OPENAI_IMAGE_SIZE}, Quality: {OPENAI_IMAGE_QUALITY}")
+    
+    # Truncate prompt if too long for DALL-E (max 4000 chars for DALL-E 3)
+    max_prompt_length = 4000 if OPENAI_IMAGE_MODEL == "dall-e-3" else 1000
+    truncated_prompt = art_concept[:max_prompt_length]
+    
+    last_exception = None
+    
+    for attempt in range(MAX_RETRIES):
+        try:
+            # Build request payload
+            payload = {
+                "model": OPENAI_IMAGE_MODEL,
+                "prompt": truncated_prompt,
+                "n": 1,
+                "size": OPENAI_IMAGE_SIZE,
+                "response_format": "b64_json"
+            }
+            
+            # Add quality parameter for DALL-E 3
+            if OPENAI_IMAGE_MODEL == "dall-e-3":
+                payload["quality"] = OPENAI_IMAGE_QUALITY
+            
+            # Make API request
+            request_data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/images/generations",
+                data=request_data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {OPENAI_API_KEY}"
+                }
+            )
+            
+            with urllib.request.urlopen(req, timeout=120) as response:
+                result = json.loads(response.read().decode('utf-8'))
+            
+            # Extract and save image
+            if result.get("data") and len(result["data"]) > 0:
+                image_b64 = result["data"][0].get("b64_json")
+                if image_b64:
+                    image_data = base64.b64decode(image_b64)
+                    with open(image_path, "wb") as f:
+                        f.write(image_data)
+                    print(f"✓ Image saved to {image_path}")
+                    return str(image_path)
+            
+            raise ImageGenerationError("No valid image data in OpenAI response")
+            
+        except urllib.error.HTTPError as e:
+            last_exception = e
+            error_body = e.read().decode('utf-8') if e.fp else str(e)
+            
+            is_rate_limit = e.code == 429 or "rate" in error_body.lower()
+            
+            if is_rate_limit and attempt < MAX_RETRIES - 1:
+                delay = min(INITIAL_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+                print(f"Rate limit hit (attempt {attempt + 1}/{MAX_RETRIES}). Retrying in {delay:.1f} seconds...")
+                time.sleep(delay)
+                continue
+            else:
+                print(f"ERROR: OpenAI API error (HTTP {e.code}): {error_body}")
+                break
+                
+        except Exception as e:
+            last_exception = e
+            error_str = str(e)
+            
+            is_rate_limit = "429" in error_str or "rate" in error_str.lower()
+            
+            if is_rate_limit and attempt < MAX_RETRIES - 1:
+                delay = min(INITIAL_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+                print(f"Rate limit hit (attempt {attempt + 1}/{MAX_RETRIES}). Retrying in {delay:.1f} seconds...")
+                time.sleep(delay)
+                continue
+            else:
+                break
+    
+    print(f"ERROR: Failed to generate image using OpenAI: {last_exception}")
+    print(f"Error type: {type(last_exception).__name__}")
+    raise ImageGenerationError(f"OpenAI image generation failed: {last_exception}")
+
+
+def generate_image(art_concept, art_style):
+    """
+    Generate an image based on the art concept prompt using the configured provider.
+    
+    Supported providers (set via IMAGE_PROVIDER environment variable):
+    - gemini: Google Gemini/Imagen API (default)
+    - openai: OpenAI DALL-E API
+    
+    Args:
+        art_concept: The detailed art concept prompt
+        art_style: The art style name (for filename)
+    
+    Returns:
+        str: Path to the saved image file
+    """
+    print(f"Generating image for {art_style}...")
+    print(f"Using prompt: {art_concept[:100]}...")
+    print(f"Using provider: {IMAGE_PROVIDER}")
+    
+    # Prepare image path
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    image_filename = f"{timestamp}.png"
+    image_path = IMAGES_DIR / image_filename
+    
+    # Ensure images directory exists
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        if IMAGE_PROVIDER == "openai":
+            return generate_image_openai(art_concept, image_path)
+        elif IMAGE_PROVIDER == "gemini":
+            return generate_image_gemini(art_concept, image_path)
+        else:
+            print(f"WARNING: Unknown provider '{IMAGE_PROVIDER}', falling back to gemini")
+            return generate_image_gemini(art_concept, image_path)
+    except ImageGenerationError:
+        print(f"\nThe art concept prompt has been saved to the gist.")
+        print(f"You can use it with other image generation tools:")
+        print(f"  - DALL-E (OpenAI) - set IMAGE_PROVIDER=openai")
+        print(f"  - Gemini/Imagen - set IMAGE_PROVIDER=gemini")
+        print(f"  - Stable Diffusion")
+        print(f"  - Midjourney")
+        print(f"  - Vertex AI Imagen (Google Cloud)")
+        raise
 
 
 def create_metadata_file(art_style, art_concept, gist_url, image_path):
@@ -308,7 +432,9 @@ def create_metadata_file(art_style, art_concept, gist_url, image_path):
         "gist_url": gist_url,
         "image_file": Path(image_path).name,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "gemini_model": GEMINI_MODEL
+        "text_model": GEMINI_MODEL,
+        "image_provider": IMAGE_PROVIDER,
+        "image_model": OPENAI_IMAGE_MODEL if IMAGE_PROVIDER == "openai" else GEMINI_IMAGE_MODEL
     }
     
     metadata_filename = Path(image_path).stem + "_metadata.json"
@@ -331,6 +457,13 @@ def main():
         print("ERROR: GEMINI_API_KEY environment variable is not set")
         sys.exit(1)
     
+    # Validate image provider configuration
+    if not SKIP_IMAGE_GENERATION:
+        if IMAGE_PROVIDER == "openai" and not OPENAI_API_KEY:
+            print("ERROR: IMAGE_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
+            sys.exit(1)
+        print(f"Image provider: {IMAGE_PROVIDER}")
+    
     # Step 1: Select random art style
     art_style = select_random_art_style()
     print(f"\n[1/4] Selected art style: {art_style}")
@@ -348,9 +481,9 @@ def main():
     image_path = None
     if SKIP_IMAGE_GENERATION:
         print(f"\n[4/4] Skipping image generation (SKIP_IMAGE_GENERATION=true)")
-        print("  Note: Image generation requires Imagen API access")
+        print("  Note: Set IMAGE_PROVIDER to 'openai' or 'gemini' and provide API keys")
     else:
-        print(f"\n[4/4] Generating image...")
+        print(f"\n[4/4] Generating image using {IMAGE_PROVIDER}...")
         try:
             image_path = generate_image(art_concept, art_style)
             print(f"  Image saved: {image_path}")
@@ -369,6 +502,7 @@ def main():
     print(f"  Prompt: {gist_url}")
     if image_path:
         print(f"  Image: {image_path}")
+        print(f"  Provider: {IMAGE_PROVIDER}")
     else:
         print(f"  Image: Not generated (use prompt with external tools)")
     print("=" * 60)
